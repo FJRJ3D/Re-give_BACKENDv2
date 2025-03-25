@@ -18,6 +18,13 @@ exports.getAllProducts = onRequest({ region: "us-central1" }, async (request, re
     response.json(products);
 });
 
+exports.getProductById = onRequest({ region: "us-central1" }, async (request, response) => {
+    const id = request.url.replace(/^\/+|\/+$/g, '');
+    const productRef = db.collection("products").doc(id);
+    const productDoc = await productRef.get();
+    response.json({ id: productDoc.id, ...productDoc.data() });
+});
+
 exports.updateProduct = onRequest({ region: "us-central1" }, async (request, response) => {
     const id = request.url.replace(/^\/+|\/+$/g, '');
     const data = request.body;

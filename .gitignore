@@ -67,3 +67,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# JetBrains IDE settings (WebStorm, IntelliJ IDEA, etc.)
+.idea/

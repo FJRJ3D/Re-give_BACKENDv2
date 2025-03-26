@@ -1,43 +1,107 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
 initializeApp();
 const db = getFirestore();
 
 exports.createProduct = onRequest({ region: "us-central1" }, async (request, response) => {
-    const docRef = await db.collection("products").add(request.body);
-    const newDoc = await docRef.get();
-    const createdItem = { id: newDoc.id, ...newDoc.data() };
-    response.json( createdItem );
+    try {
+        if (!request.headers.authorization) {
+            return response.status(401).json({ error: "Unauthorized: Missing Authorization header" });
+        }
+
+        const idToken = request.headers.authorization.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+
+        const productData = { ...request.body, uid };
+        const docRef = await db.collection("products").add(productData);
+        const newDoc = await docRef.get();
+
+        response.status(201).json({ id: newDoc.id, ...newDoc.data() });
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
 });
 
 exports.getAllProducts = onRequest({ region: "us-central1" }, async (request, response) => {
-    const snapshot = await db.collection("products").get();
-    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    response.json(products);
+    try {
+        const snapshot = await db.collection("products").get();
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        response.json(products);
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
+});
+
+exports.getAllProductsByUser = onRequest({ region: "us-central1" }, async (request, response) => {
+    try {
+        if (!request.headers.authorization) {
+            return response.status(401).json({ error: "Unauthorized: Missing Authorization header" });
+        }
+
+        const idToken = request.headers.authorization.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+
+        const snapshot = await db.collection("products").where("uid", "==", uid).get();
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        response.json(products);
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
 });
 
 exports.getProductById = onRequest({ region: "us-central1" }, async (request, response) => {
-    const id = request.url.replace(/^\/+|\/+$/g, '');
-    const productRef = db.collection("products").doc(id);
-    const productDoc = await productRef.get();
-    response.json({ id: productDoc.id, ...productDoc.data() });
+    try {
+        const id = request.url.replace(/^\/+|\/+$/g, '');
+        const productRef = db.collection("products").doc(id);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return response.status(404).json({ error: "Product not found" });
+        }
+
+        response.json({ id: productDoc.id, ...productDoc.data() });
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
 });
 
 exports.updateProduct = onRequest({ region: "us-central1" }, async (request, response) => {
-    const id = request.url.replace(/^\/+|\/+$/g, '');
-    const data = request.body;
-    const productRef = db.collection("products").doc(id);
-    const productDoc = await productRef.get();
-    await productRef.update(data);
-    const updatedProduct = { id: productDoc.id, ...productDoc.data(), ...data };
-    response.json(updatedProduct);
+    try {
+        const id = request.url.replace(/^\/+|\/+$/g, '');
+        const data = request.body;
+        const productRef = db.collection("products").doc(id);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return response.status(404).json({ error: "Product not found" });
+        }
+
+        await productRef.update(data);
+        response.json({ id: productDoc.id, ...productDoc.data(), ...data });
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
 });
 
 exports.deleteProduct = onRequest({ region: "us-central1" }, async (request, response) => {
-    const id = request.url.replace(/^\/+|\/+$/g, '');
-    const productRef = db.collection("products").doc(id);
-    await productRef.delete();
-    response.json(`Product with id ${id} deleted successfully`);
+    try {
+        const id = request.url.replace(/^\/+|\/+$/g, '');
+        const productRef = db.collection("products").doc(id);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return response.status(404).json({ error: "Product not found" });
+        }
+
+        await productRef.delete();
+        response.json({ message: `Product with id ${id} deleted successfully` });
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
 });

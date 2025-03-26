@@ -120,4 +120,69 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
     } catch (error) {
         response.status(500).json({ error: error.message });
     }
+
+});
+
+exports.createOrder = onRequest({ region: "us-central1" }, async (request, response) => {
+    try {
+        const orderData = request.body;
+        const newOrderData = {
+            ...orderData,
+            isAccepted: false,
+            isFinished: false
+        }
+        const docRef = await db.collection("orders").add(newOrderData);
+        const newDoc = await docRef.get();
+        console.log("Order was created");
+        response.json({ id: newDoc.id, ...newDoc.data() });
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ error: error.message });
+    }
+});
+
+exports.deleteOrderByUid = onRequest({ region: "us-central1" }, async (request, response) => {
+    try {
+        const orderId = request.path.split("/").filter(Boolean).pop();
+        await db.collection("orders").doc(orderId).delete();
+        console.log("Order deleted successfully by uid", orderId);
+        response.json({ message: `Order deleted successfully` });
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ error: error.message });
+    }
+});
+
+exports.getAllOrdersWithProductsByUserUid = onRequest({ region: "us-central1" }, async (request, response) => {
+    try {
+        const ordersWithProducts = [];
+        const userUid = request.path.split("/").filter(Boolean).pop();
+        const orderList = await db.collection('orders')
+            .where("userId", "==", userUid)
+            .get();
+        for (const orderDoc of orderList.docs) {
+            const orderData = orderDoc.data();
+            const productId = orderData.productId;
+
+            const productDoc = await db.collection("products").doc(productId).get();
+            const productData = productDoc.data();
+            const orderWithProduct = {
+                orderId: orderDoc.id,
+                isAccepted: orderData.isAccepted,
+                isFinished: orderData.isFinished,
+                product: {
+                    id: productDoc.id,
+                    name: productData.name,
+                    description: productData.description,
+                    imageUrl: productData.imageUrl
+                }
+            };
+            ordersWithProducts.push(orderWithProduct);
+        }
+        console.log("Orders with products received");
+        response.json(ordersWithProducts);
+    } catch (error) {
+        console.error(error);
+        response.status(500).json({ error: error.message });
+    }
 });

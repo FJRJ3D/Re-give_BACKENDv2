@@ -105,3 +105,19 @@ exports.deleteProduct = onRequest({ region: "us-central1" }, async (request, res
         response.status(500).json({ error: error.message });
     }
 });
+
+exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (request, response) => {
+    try {
+        const productId = request.url.replace(/^\/+|\/+$/g, '');
+        const snapshot = await db.collection("orders").where("productId", "==", productId).get();
+
+        if (snapshot.empty) {
+            return response.status(404).json({ error: "No orders found for this product" });
+        }
+
+        const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        response.json(orders);
+    } catch (error) {
+        response.status(500).json({ error: error.message });
+    }
+});

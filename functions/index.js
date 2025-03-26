@@ -141,7 +141,10 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
             response.status(500).json({ error: error.message });
         }
     });
-    exports.createOrder = onRequest({ region: "us-central1" }, async (request, response) => {
+});
+
+exports.createOrder = onRequest({ region: "us-central1" }, async (request, response) => {
+    corsHandler(request, response, async () => {
         try {
             const orderData = request.body;
             const newOrderData = {
@@ -158,8 +161,10 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
             response.status(500).json({ error: error.message });
         }
     });
+});
 
-    exports.deleteOrderByUid = onRequest({ region: "us-central1" }, async (request, response) => {
+exports.deleteOrderByUid = onRequest({ region: "us-central1" }, async (request, response) => {
+    corsHandler(request, response, async () => {
         try {
             const orderId = request.path.split("/").filter(Boolean).pop();
             await db.collection("orders").doc(orderId).delete();
@@ -170,8 +175,10 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
             response.status(500).json({ error: error.message });
         }
     });
+});
 
-    exports.getAllOrdersWithProductsByUserUid = onRequest({ region: "us-central1" }, async (request, response) => {
+exports.getAllOrdersWithProductsByUserUid = onRequest({ region: "us-central1" }, async (request, response) => {
+    corsHandler(request, response, async () => {
         try {
             const ordersWithProducts = [];
             const userUid = request.path.split("/").filter(Boolean).pop();
@@ -204,5 +211,4 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
             response.status(500).json({ error: error.message });
         }
     });
-
 });

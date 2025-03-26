@@ -110,12 +110,16 @@ exports.getAllOrdersByProductId = onRequest({ region: "us-central1" }, async (re
     try {
         const productId = request.url.replace(/^\/+|\/+$/g, '');
         const snapshot = await db.collection("orders").where("productId", "==", productId).get();
-
-        if (snapshot.empty) {
-            return response.status(404).json({ error: "No orders found for this product" });
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+        if (!productDoc.exists) {
+            return response.status(404).json({ error: "Product not found" });
         }
-
-        const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            ...productDoc.data(),
+        }));
         response.json(orders);
     } catch (error) {
         response.status(500).json({ error: error.message });

@@ -1,9 +1,9 @@
-const { onCreate } = 'firebase-functions/v2/auth';
-const { admin } = ('firebase-admin');
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-exports.setCustomClaimForNewUser = onCreate(async (user) => {
+exports.setCustomClaimForNewUser = functions.auth.user().onCreate(async (user) => {
     try {
         const listUsersResult = await admin.auth().listUsers();
         const isFirstUser = listUsersResult.users.length === 1;
